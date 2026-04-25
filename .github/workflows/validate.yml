@@ -5,9 +5,14 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  validate:
+  bicep-validate:
+    name: Bicep Validate
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,3 +20,23 @@ jobs:
       - name: Validate Bicep templates
         shell: pwsh
         run: ./tests/validate-guardrails.ps1
+
+  psscriptanalyzer:
+    name: PowerShell Script Analyzer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: Install-Module PSScriptAnalyzer -Force -Scope CurrentUser
+
+      - name: Analyze scripts
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path scripts/ -Recurse -Severity Error,Warning
+          if ($results) {
+            $results | Format-Table -AutoSize
+            exit 1
+          }
+          Write-Information "PSScriptAnalyzer: no issues found." -InformationAction Continue
